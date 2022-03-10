@@ -1,0 +1,37 @@
+#ROUTER 1
+en
+conf t 
+hostname R1
+
+int g0/0
+ip add 192.168.1.1 255.255.255.0
+no shut
+
+int g0/1
+ip add 192.168.2.1 255.255.255.0
+no shut
+
+#ROUTER 2
+en
+conf t 
+hostname R2
+
+int g0/0
+ip add 192.168.2.2 255.255.255.0
+no shut	
+
+int g0/1
+ip add 192.168.3.1 255.255.255.0
+no shut	
+
+int g0/2
+ip add 192.168.4.1 255.255.255.0
+no shut	
+
+
+# ENRUTAMIENTO ESTATICO DESDE R1 (desde conf t):
+ip route 192.168.3.0 255.255.255.0 192.168.2.2
+ip route 192.168.4.0 255.255.255.0 192.168.2.2
+
+# ENRUTAMIENTO ESTATICO DESDE R2 (desde conf t):
+ip route 192.168.1.0 255.255.255.0 192.168.2.1		

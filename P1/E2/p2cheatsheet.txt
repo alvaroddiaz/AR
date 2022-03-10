@@ -1,0 +1,35 @@
+ROUTER 1:
+
+en
+conf t
+router rip
+version 2
+
+network 192.168.1.0
+network 192.168.2.0
+network 192.168.5.0
+
+
+ROUTER 2:
+
+en
+conf t
+router rip
+version 2
+
+network 192.168.2.0
+network 192.168.3.0
+network 192.168.4.0
+network 192.168.6.0
+
+
+ROUTER 3:
+
+en
+conf t
+router rip
+version 2
+
+network 192.168.5.0
+network 192.168.6.0
+
