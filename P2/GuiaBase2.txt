@@ -1,5 +1,7 @@
 Comandos:
 
+
+
 Switch(config)#vlan <nº vlan>                            // CREAR VLAN CON ID
 Switch(config-vlan)#name <nombre>                        // ASIGNARLE NOMBRE A ESA VLAN
 
@@ -24,7 +26,7 @@ Para revisar la configuración utilizamos:
 
 Switch> show vlan
 Switch> show interfaces switchport
-
+show int trunk 
 
 
 Eliminar vlan:
@@ -52,8 +54,6 @@ portfast deshabilita la generación de TCN BPDUs y provoca que los puertos de ac
 Configurar la prioridad en STP:
 
 Método 1:
-
-spanning-tree mode rapid-pvst  
 
 spanning-tree vlan vlan-id root primary    //Asignar el menor valor de prioridad de puente
 
@@ -245,20 +245,24 @@ exit
 
 
 int vlan 10
+standby 10 ip 10.1.1.1
 standby 10 priority 110
 standby 10 preempt
 exit
 
 int vlan 20
+standby 20 ip 10.1.2.1
 standby 20 priority 110
 standby 20 preempt
 exit
 
 int vlan 30
+standby 30 ip 10.1.3.1
 standby 30 preempt
 exit
 
 int vlan 40
+standby 40 ip 10.1.4.1
 standby 40 preempt
 exit
 
@@ -357,19 +361,23 @@ exit
 
 
 int vlan 10
+standby 10 ip 10.1.1.1
 standby 10 preempt
 exit
 
 int vlan 20
+standby 20 ip 10.1.2.1
 standby 20 preempt
 exit
 
 int vlan 30
+standby 30 ip 10.1.3.1
 standby 30 priority 110
 standby 30 preempt
 exit
 
 int vlan 40
+standby 40 ip 10.1.4.1
 standby 40 priority 110
 standby 40 preempt
 exit
@@ -412,5 +420,4 @@ exit
 router rip
 version 2
 network 10.0.0.0
-
 
