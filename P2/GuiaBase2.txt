@@ -243,6 +243,7 @@ ip add 10.1.4.253 255.255.255.0
 exit
 
 
+// FALTA NOSHUT DIAPO 36/43
 
 int vlan 10
 standby 10 ip 10.1.1.1
