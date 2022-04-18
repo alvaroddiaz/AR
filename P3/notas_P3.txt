@@ -1,0 +1,580 @@
+Práctica más difícil!!!
+
+ACLs -> iptables
+
+El punto de referencia para saber si entra o sale es el router.
+ - Si entra o sale de la interface
+
+- Filtrar todo lo antes posible
+
+ip access group 1.out
+
+buena practica: ip ... deny up any any
+
+-------------------------------------------------------------------------------
+
+en
+conf t
+hostname Frontera
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+interface Serial 0/0/0
+ip access-list standard 1
+
+! IP piratas (privadas)
+deny 10.0.0.0 0.255.255.255
+deny 172.16.0.0 0.15.255.255
+deny 192.168.0.0 0.0.255.255
+
+! toda la red?
+deny host 0.0.0.0
+
+! localhost
+deny host 127.0.0.1
+
+! router
+deny host 192.0.0.1
+
+! broadcast
+deny host 255.255.255.255
+
+permit any
+
+interface Serial 0/0/0
+ip access-group 1 in
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname FW
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip nat pool NATPOOL 192.0.0.10 192.0.0.12 netmask 255.255.255.0
+
+access-list 1 permit 10.1.0.0 0.0.255.255
+access-list 1 permit 10.2.0.0 0.0.255.255
+access-list 1 permit 10.3.0.0 0.0.255.255
+
+ip nat inside source static tcp 10.255.1.10 443 192.0.0.13 443
+ip nat inside source static tcp 10.255.2.10 443 192.0.0.14 443
+
+ip nat inside source list 1 pool NATPOOL OVERLOAD
+
+interface g0/1
+ip nat outside
+exit
+
+interface g0/0
+ip nat inside
+exit
+
+interface g0/2
+ip nat inside
+exit
+
+ip access-list extended 100
+permit tcp any host 192.0.0.13 eq 80
+permit tcp any host 192.0.0.14 eq 80
+permit tcp any host 192.0.0.13 eq 443
+permit tcp any host 192.0.0.14 eq 443
+permit icmp any any echo-reply
+permit icmp any any unreachable
+exit
+
+ip inspect name FWRULE tcp
+
+interface g0/1
+ip access-group 100 in
+ip inspect FWRULE out
+
+end
+wr
+reload
+
+
+en
+conf t
+hostname DL-SW11
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+
+permit tcp 10.1.1.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.1.1.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.1.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.1.0 0.0.0.255 any
+
+exit
+interface vlan 10
+ip access-group 110 in
+exit
+
+ip access-list extended 120
+
+permit tcp 10.1.2.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.1.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.2.0 0.0.0.255 any
+
+exit
+interface vlan 20
+ip access-group 120 in
+exit
+
+ip access-list extended 130
+
+permit tcp 10.1.3.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.1.3.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.1.3.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.3.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.3.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.3.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.3.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.3.0 0.0.0.255 any
+
+exit
+interface vlan 30
+ip access-group 130 in
+exit
+
+ip access-list extended 140
+
+permit tcp 10.1.4.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.1.4.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.4.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.4.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.4.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.4.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.4.0 0.0.0.255 any
+
+exit
+interface vlan 40
+ip access-group 140 in
+exit
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname DL-SW12
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+
+permit tcp 10.1.1.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.1.1.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.1.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.1.0 0.0.0.255 any
+
+exit
+interface vlan 10
+ip access-group 110 in
+exit
+
+ip access-list extended 120
+
+permit tcp 10.1.2.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.1.2.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.1.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.2.0 0.0.0.255 any
+
+exit
+interface vlan 20
+ip access-group 120 in
+exit
+
+ip access-list extended 130
+
+permit tcp 10.1.3.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.1.3.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.1.3.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.3.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.3.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.3.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.3.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.3.0 0.0.0.255 any
+
+exit
+interface vlan 30
+ip access-group 130 in
+exit
+
+ip access-list extended 140
+
+permit tcp 10.1.4.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.1.4.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.1.4.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.1.4.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.1.4.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.1.4.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.1.4.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.1.4.0 0.0.0.255 any
+
+exit
+interface vlan 40
+ip access-group 140 in
+exit
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname DL-SW21
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+permit tcp 10.2.1.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.2.1.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.2.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.1.0 0.0.0.255 any
+
+exit
+interface vlan 10
+ip access-group 110 in
+exit
+
+ip access-list extended 120
+permit tcp 10.2.2.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.2.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.2.0 0.0.0.255 any
+
+exit
+interface vlan 20
+ip access-group 120 in
+exit
+
+ip access-list extended 130
+permit tcp 10.2.3.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.2.3.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.2.3.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.3.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.3.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.3.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.3.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.3.0 0.0.0.255 any
+
+exit
+interface vlan 30
+ip access-group 130 in
+exit
+
+ip access-list extended 140
+permit tcp 10.2.4.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.2.4.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.4.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.4.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.4.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.4.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.4.0 0.0.0.255 any
+
+exit
+interface vlan 40
+ip access-group 140 in
+exit
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname DL-SW22
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+permit tcp 10.2.1.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.2.1.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.2.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.1.0 0.0.0.255 any
+
+exit
+interface vlan 10
+ip access-group 110 in
+exit
+
+ip access-list extended 120
+permit tcp 10.2.2.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.2.2.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.2.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.2.0 0.0.0.255 any
+
+exit
+interface vlan 20
+ip access-group 120 in
+exit
+
+ip access-list extended 130
+permit tcp 10.2.3.0 0.0.0.255 10.255.1.0 0.0.0.255 eq 80
+permit udp 10.2.3.0 0.0.0.255 host 10.255.1.10 eq 53
+
+permit udp 10.2.3.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.3.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.3.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.3.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.3.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.3.0 0.0.0.255 any
+
+exit
+interface vlan 30
+ip access-group 130 in
+exit
+
+ip access-list extended 140
+permit tcp 10.2.4.0 0.0.0.255 10.255.2.0 0.0.0.255 eq 80
+permit tcp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 25
+permit tcp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 110
+permit udp 10.2.4.0 0.0.0.255 host 10.255.2.10 eq 53
+
+permit udp 10.2.4.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.2.4.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.2.4.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.2.4.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.2.4.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit icmp 10.2.4.0 0.0.0.255 any
+
+exit
+interface vlan 40
+ip access-group 140 in
+exit
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname DL-SW-DC1
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+permit tcp 10.255.1.0 0.0.0.255 eq 443 any gt 1023 established
+permit udp host 10.255.1.10 eq 53 10.0.0.0 0.255.255.255 gt 1023
+
+permit udp 10.255.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.255.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.255.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.255.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.255.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit tcp 10.255.1.0 0.0.0.255 any eq 443
+permit icmp 10.255.1.0 0.0.0.255 any
+
+interface vlan 10
+ip access-group 110 in
+
+
+ip access-list extended 120
+permit tcp 10.255.2.0 0.0.0.255 eq 443 any gt 1023 established
+permit tcp host 10.255.2.10 eq 25 10.0.0.0 0.255.255.255 gt 1023 established
+permit tcp host 10.255.2.10 eq 110 10.0.0.0 0.255.255.255 gt 1023 established
+permit udp host 10.255.2.10 eq 53 10.0.0.0 0.255.255.255 gt 1023
+
+permit udp 10.255.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.255.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.255.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.255.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.255.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit tcp 10.255.2.0 0.0.0.255 any eq 443
+permit icmp 10.255.2.0 0.0.0.255 any
+
+interface vlan 20
+ip access-group 120 in
+
+end
+wr
+reload
+
+
+
+en
+conf t
+hostname DL-SW-DC2
+no ip domain-lookup
+
+line console 0
+logging synchronous
+exit
+
+ip access-list extended 110
+permit tcp 10.255.1.0 0.0.0.255 eq 443 any gt 1023 established
+permit udp host 10.255.1.10 eq 53 10.0.0.0 0.255.255.255 gt 1023
+
+permit udp 10.255.1.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.255.1.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.255.1.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.255.1.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.255.1.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit tcp 10.255.1.0 0.0.0.255 any eq 443
+permit icmp 10.255.1.0 0.0.0.255 any
+
+interface vlan 10
+ip access-group 110 in
+
+
+ip access-list extended 120
+permit tcp 10.255.2.0 0.0.0.255 eq 443 any gt 1023 established
+permit tcp host 10.255.2.10 eq 25 10.0.0.0 0.255.255.255 gt 1023 established
+permit tcp host 10.255.2.10 eq 110 10.0.0.0 0.255.255.255 gt 1023 established
+permit udp host 10.255.2.10 eq 53 10.0.0.0 0.255.255.255 gt 1023
+
+permit udp 10.255.2.0 0.0.0.255 host 224.0.0.2 eq 1985
+permit udp 10.255.2.0 0.0.0.255 host 224.0.0.102 eq 1985
+
+permit ospf 10.255.2.0 0.0.0.255 host 224.0.0.5
+permit ospf 10.255.2.0 0.0.0.255 host 224.0.0.6
+
+deny ip 10.255.2.0 0.0.0.255 10.0.0.0 0.255.255.255
+permit tcp 10.255.2.0 0.0.0.255 any eq 443
+permit icmp 10.255.2.0 0.0.0.255 any
+
+interface vlan 20
+ip access-group 120 in
+
+end
+wr
+reload
